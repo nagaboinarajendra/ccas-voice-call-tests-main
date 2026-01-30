@@ -660,7 +660,7 @@ if (existsSync(audioFilePath)) {
 
 test.use({
   channel: 'chrome',
-  headless: false,
+  headless: true,
   permissions: ['microphone', 'camera'],
   launchOptions: {
     args: [
