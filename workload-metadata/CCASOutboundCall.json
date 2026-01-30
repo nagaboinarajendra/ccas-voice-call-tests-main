@@ -8,7 +8,7 @@
             "users_file": "00DXE000000CjCj_outbound.csv",
             "max_duration_in_mins": 5,
             "ramp_up_interval_millis": 1000,
-            "users_count": 200,
+            "users_count": 1,
             "scripts": [
                 {
                     "script_name": "CCASOutboundCall.spec.js",
