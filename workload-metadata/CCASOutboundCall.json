@@ -1,12 +1,12 @@
 {
-    "max_duration": 5,
+    "max_duration": 10,
     "tasks": [
         {
             "load_type": "playwright",
             "version": "1.0.3",
             "task_name": "CCASOutboundCall-flow",
             "users_file": "00DXE000000CjCj_outbound.csv",
-            "max_duration_in_mins": 5,
+            "max_duration_in_mins": 2,
             "ramp_up_interval_millis": 1000,
             "users_count": 1,
             "scripts": [
