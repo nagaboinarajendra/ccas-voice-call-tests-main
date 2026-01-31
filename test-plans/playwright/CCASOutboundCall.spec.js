@@ -658,22 +658,47 @@ async function endCall(page) {
     console.log('🔴 Step: Setting Omni-Channel to Offline');
     logger.info(`\n##### [CCAS Outbound] Agent ${username} : ************* Setting Omni-Channel to Offline ************** ${new Date().toISOString()}\n`);
     
-    // Click on Omni-Channel (may be "Omni-Channel (Online)" or just "Omni-Channel")
-    try {
-      await page.locator(`xpath=${ACCESSORS.omniChannelOnline}`).waitFor({ state: 'visible', timeout: 10000 });
-      await page.locator(`xpath=${ACCESSORS.omniChannelOnline}`).click();
-      logger.info(`\n##### [CCAS Outbound] Agent ${username} : ************* Clicked on Omni-Channel (Online) ************** ${new Date().toISOString()}\n`);
-    } catch (error) {
-      // Fallback to regular Omni-Channel button
-      await page.locator(`xpath=${ACCESSORS.omniChannel}`).waitFor({ state: 'visible', timeout: 10000 });
-      await page.locator(`xpath=${ACCESSORS.omniChannel}`).click();
-      logger.info(`\n##### [CCAS Outbound] Agent ${username} : ************* Clicked on Omni-Channel ************** ${new Date().toISOString()}\n`);
+    // Wait a bit for UI to settle after ending call
+    await delay(2000);
+    
+    // Try multiple times to open Omni-Channel panel (it might be collapsed)
+    let panelOpened = false;
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      try {
+        logger.info(`\n##### [CCAS Outbound] Agent ${username} : ************* Attempt ${attempt}/3 to open Omni-Channel panel ************** ${new Date().toISOString()}\n`);
+        
+        // Try Omni-Channel (Online) first
+        try {
+          await page.locator(`xpath=${ACCESSORS.omniChannelOnline}`).click({ timeout: 5000 });
+          logger.info(`\n##### [CCAS Outbound] Agent ${username} : ************* Clicked on Omni-Channel (Online) ************** ${new Date().toISOString()}\n`);
+        } catch (error) {
+          // Fallback to regular Omni-Channel button
+          await page.locator(`xpath=${ACCESSORS.omniChannel}`).click({ timeout: 5000 });
+          logger.info(`\n##### [CCAS Outbound] Agent ${username} : ************* Clicked on Omni-Channel ************** ${new Date().toISOString()}\n`);
+        }
+        
+        // Wait for panel to open and dropdown to be visible
+        await delay(2000);
+        
+        // Check if dropdown is visible
+        const dropdownVisible = await page.locator(ACCESSORS.statusDropDown).isVisible({ timeout: 5000 });
+        if (dropdownVisible) {
+          panelOpened = true;
+          logger.info(`\n##### [CCAS Outbound] Agent ${username} : ************* Panel opened successfully on attempt ${attempt} ************** ${new Date().toISOString()}\n`);
+          break;
+        } else {
+          logger.warn(`\n##### [CCAS Outbound] Agent ${username} : ************* Dropdown not visible, will retry... ************** ${new Date().toISOString()}\n`);
+        }
+      } catch (error) {
+        logger.warn(`\n##### [CCAS Outbound] Agent ${username} : ************* Attempt ${attempt} failed: ${error.message} ************** ${new Date().toISOString()}\n`);
+      }
     }
     
-    await delay(1000);
+    if (!panelOpened) {
+      throw new Error('Could not open Omni-Channel panel after 3 attempts');
+    }
     
     // Click status dropdown
-    await page.locator(ACCESSORS.statusDropDown).waitFor({ state: 'visible', timeout: timeoutMs });
     await page.locator(ACCESSORS.statusDropDown).click();
     logger.info(`\n##### [CCAS Outbound] Agent ${username} : ************* Clicked on Status DropDown ************** ${new Date().toISOString()}\n`);
     
