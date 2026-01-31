@@ -76,6 +76,7 @@ const ACCESSORS = {
   omniChannelOnline: '//div[contains(@class, "oneUtilityBarItem")]/button/span[text()="Omni-Channel (Online)"]',
   statusDropDown: '.oneUtilityBarPanel .slds-dropdown-trigger button',
   availableForVoice: '//div[contains(@class, "slds-dropdown__item")]//span[text()="Available"]',
+  offlineStatus: '//div[contains(@class, "slds-dropdown__item")]//span[text()="Offline"]',
   
   // Telephony - Outbound
   telephonyTab: '//div[@class="uiTabBar"]//a[@data-tab-name="embeddedTelephonyTab"]//span[@class="title"]',
@@ -604,6 +605,16 @@ async function endCall(page) {
     logger.info(`\n##### [CCAS Outbound] Agent ${username} : ************* Clicked Omni Channel Online button ************** ${new Date().toISOString()}\n`);
     await delay(1000);
     
+    // Take screenshot BEFORE clicking End button (to capture call controls)
+    if (process.env.screenshot || config.screenshot) {
+      try {
+        await page.screenshot({ path: getScreenshotPath('BeforeEndButton_CallControls.png') });
+        logger.info(`\n##### [CCAS Outbound] Agent ${username} : ************* Screenshot saved before End button: BeforeEndButton_CallControls.png ************** ${new Date().toISOString()}\n`);
+      } catch (screenshotError) {
+        logger.warn(`\n##### [CCAS Outbound] Agent ${username} : ************* Screenshot failed: ${screenshotError.message} ************** ${new Date().toISOString()}\n`);
+      }
+    }
+    
     // Now click End button
     await page.locator(`xpath=${ACCESSORS.endCallButton}`).waitFor({ state: 'visible', timeout: 10000 });
     await page.locator(`xpath=${ACCESSORS.endCallButton}`).click();
@@ -641,6 +652,53 @@ async function endCall(page) {
   }
   
   await delay(getNumberConfig('defaultTimeout', 3000));
+  
+  // Set Omni-Channel to Offline to complete the flow
+  try {
+    console.log('🔴 Step: Setting Omni-Channel to Offline');
+    logger.info(`\n##### [CCAS Outbound] Agent ${username} : ************* Setting Omni-Channel to Offline ************** ${new Date().toISOString()}\n`);
+    
+    // Click on Omni-Channel (may be "Omni-Channel (Online)" or just "Omni-Channel")
+    try {
+      await page.locator(`xpath=${ACCESSORS.omniChannelOnline}`).waitFor({ state: 'visible', timeout: 10000 });
+      await page.locator(`xpath=${ACCESSORS.omniChannelOnline}`).click();
+      logger.info(`\n##### [CCAS Outbound] Agent ${username} : ************* Clicked on Omni-Channel (Online) ************** ${new Date().toISOString()}\n`);
+    } catch (error) {
+      // Fallback to regular Omni-Channel button
+      await page.locator(`xpath=${ACCESSORS.omniChannel}`).waitFor({ state: 'visible', timeout: 10000 });
+      await page.locator(`xpath=${ACCESSORS.omniChannel}`).click();
+      logger.info(`\n##### [CCAS Outbound] Agent ${username} : ************* Clicked on Omni-Channel ************** ${new Date().toISOString()}\n`);
+    }
+    
+    await delay(1000);
+    
+    // Click status dropdown
+    await page.locator(ACCESSORS.statusDropDown).waitFor({ state: 'visible', timeout: timeoutMs });
+    await page.locator(ACCESSORS.statusDropDown).click();
+    logger.info(`\n##### [CCAS Outbound] Agent ${username} : ************* Clicked on Status DropDown ************** ${new Date().toISOString()}\n`);
+    
+    await delay(1000);
+    
+    // Select Offline
+    await page.locator(`xpath=${ACCESSORS.offlineStatus}`).waitFor({ state: 'visible', timeout: timeoutMs });
+    await page.locator(`xpath=${ACCESSORS.offlineStatus}`).click();
+    logger.info(`\n##### [CCAS Outbound] Agent ${username} : ************* Selected Offline status ************** ${new Date().toISOString()}\n`);
+    
+    await delay(2000);
+    
+    // Take final screenshot showing Offline state
+    if (process.env.screenshot || config.screenshot) {
+      await page.screenshot({ path: getScreenshotPath('OmniChannel_Offline_Complete.png') });
+      logger.info(`\n##### [CCAS Outbound] Agent ${username} : ************* Screenshot saved: OmniChannel_Offline_Complete.png ************** ${new Date().toISOString()}\n`);
+    }
+    
+    logger.info(`\n##### [CCAS Outbound] Agent ${username} : ************* Successfully set Omni-Channel to Offline ************** ${new Date().toISOString()}\n`);
+    console.log('✅ Omni-Channel set to Offline');
+    
+  } catch (error) {
+    logger.error(`\n##### [CCAS Outbound] Agent ${username} : ************* Error setting Omni-Channel to Offline: ${error.message} ************** ${new Date().toISOString()}\n`);
+    console.warn('⚠️ Failed to set Omni-Channel to Offline, continuing...');
+  }
 }
 
 // ============================================================
